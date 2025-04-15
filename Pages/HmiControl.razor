@@ -1,0 +1,438 @@
+@page "/hmi-control"
+@using Webapp_tien_server.Services
+@using Webapp_tien_server.Models
+@inject PlcService PlcService
+@implements IDisposable
+
+<h3 class="text-center bg-warning text-dark p-2 fw-bold">MÔ HÌNH ĐIỀU KHIỂN MÁY TIỆN 1A660</h3>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Lỗi:</strong> @errorMessage
+        <button type="button" class="btn-close" @onclick="ClearError" aria-label="Close"></button>
+    </div>
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Left Control Panel -->
+        <div class="col-md-2">
+            <div class="control-panel">
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_CTC1 ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_CTC1"))">
+                    CTC1 @(dbWebserver.DB_CTC1 ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_CTC2 ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_CTC2"))">
+                    CTC2 @(dbWebserver.DB_CTC2 ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_m1 ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_m1"))">
+                    M1 @(dbWebserver.DB_m1 ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_m2 ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_m2"))">
+                    M2 @(dbWebserver.DB_m2 ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_D ? "indicator-red" : "indicator-off")" @onclick="@(() => ToggleButton("DB_D"))">
+                    STOP @(dbWebserver.DB_D ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_TT ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_TT"))">
+                    TT @(dbWebserver.DB_TT ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_TN ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_TN"))">
+                    TN @(dbWebserver.DB_TN ? "ON" : "OFF")
+                </button>
+                <button class="btn btn-secondary mb-2 w-100 @(dbWebserver.DB_M3 ? "indicator-green" : "indicator-off")" @onclick="@(() => ToggleButton("DB_M3"))">
+                    M3 @(dbWebserver.DB_M3 ? "ON" : "OFF")
+                </button>
+            </div>
+        </div>
+
+        <!-- Middle Section - Hidden Button Indicators -->
+        <div class="col-md-3">
+            <div class="indicator-panel bg-light p-3">
+                <h5 class="text-center fw-bold">ĐÈN BÁO NÚT ẨN</h5>
+                <div class="row">
+                    <div class="col-6 text-center">
+                        <h6 class="fw-bold">QUAY THUẬN</h6>
+                        <div class="indicator @(dbWebserver.DB_m1 ? "indicator-green" : "indicator-off")">M1</div>
+                        <h6 class="mt-3 fw-bold">QUAY NGHỊCH</h6>
+                        <div class="indicator @(dbWebserver.DB_m2 ? "indicator-green" : "indicator-off")">M2</div>
+                        <h6 class="mt-3 fw-bold">STOP</h6>
+                        <div class="indicator @(dbWebserver.DB_D ? "indicator-red" : "indicator-off")">D</div>
+                    </div>
+                    <div class="col-6 text-center">
+                        <h6 class="fw-bold">THỦ THUẬN</h6>
+                        <div class="indicator @(dbWebserver.DB_TT ? "indicator-green" : "indicator-off")">TI</div>
+                        <h6 class="mt-3 fw-bold">THỦ NGHỊCH</h6>
+                        <div class="indicator @(dbWebserver.DB_TN ? "indicator-green" : "indicator-off")">TN</div>
+                        <h6 class="mt-3 fw-bold">NÚT ẨN</h6>
+                        <div class="indicator @(dbWebserver.DB_M3 ? "indicator-green" : "indicator-off")">M3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Middle Section - Warning Indicators -->
+        <div class="col-md-3">
+            <div class="indicator-panel bg-light p-3">
+                <h5 class="text-center fw-bold">ĐÈN BÁO</h5>
+                
+                <div class="row mb-3">
+                    <div class="col-6 text-center">
+                        <div class="indicator @(dbWebserver.DB_DH1 ? "indicator-green" : "indicator-off")">DH1</div>
+                    </div>
+                    <div class="col-6 text-center">
+                        <div class="indicator @(dbWebserver.DB_KBR ? "indicator-green" : "indicator-off")">KBR</div>
+                    </div>
+                </div>
+                
+                
+                <div class="row mb-3">
+                    <div class="col-6 text-center">
+                        <h6 class="text-center fw-bold">ĐÈN BÁO RC</h6>
+                        <div class="indicator @(dbWebserver.DB_DH2 ? "indicator-green" : "indicator-off")">DH2</div>
+                    </div>
+                    <div class="col-6 text-center d-flex align-items-end">
+                        <div class="indicator @(dbWebserver.DB_TD ? "indicator-green" : "indicator-off")">TD</div>
+                    </div>
+                </div>
+                
+                
+                <div class="row">
+                    <div class="col-6 text-center">
+                        <h6 class="text-center fw-bold">ĐÈN BÁO DẦU</h6>
+                        <div class="indicator @(dbWebserver.DB_DBT ? "indicator-green" : "indicator-off")">DBT</div>
+                    </div>
+                    <div class="col-6 text-center d-flex align-items-end">
+                        <div class="indicator @(dbWebserver.DB_CTC1 ? "indicator-green" : "indicator-off")">CTC1</div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col-12 text-center">
+                        <h6 class="fw-bold">BÁO HẾT DẦU</h6>
+                        <div class="indicator @(dbWebserver.DB_C ? "indicator-red" : "indicator-off")">C</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Section - ROLE Indicators -->
+        <div class="col-md-4">
+            <div class="indicator-panel bg-light p-3">
+                <h5 class="text-center fw-bold">ROLE</h5>
+                <div class="row mb-3">
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_RG ? "indicator-green" : "indicator-off")">DG</div>
+                    </div>
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_RRH ? "indicator-green" : "indicator-off")">KRH</div>
+                    </div>
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_RDG ? "indicator-green" : "indicator-off")">KDG</div>
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_K2 ? "indicator-green" : "indicator-off")">K2</div>
+                    </div>
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_T ? "indicator-green" : "indicator-off")">T</div>
+                    </div>
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_N ? "indicator-green" : "indicator-off")">N</div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_K3 ? "indicator-green" : "indicator-off")">K3</div>
+                    </div>
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_KT ? "indicator-green" : "indicator-off")">K1</div>
+                    </div>
+                    <div class="col-4 my-3 text-center">
+                        <div class="indicator @(dbWebserver.DB_KN ? "indicator-green" : "indicator-off")">KH</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-md-8">
+        <div class="alert @(isConnected ? "alert-success" : "alert-warning")">
+            <strong>Trạng thái kết nối PLC:</strong> @(isConnected ? "Đã kết nối với PLC tại 192.168.0.1" : "Chưa kết nối với PLC")
+            @if (!string.IsNullOrEmpty(connectionMessage))
+            {
+                <div class="mt-2">
+                    <small>@connectionMessage</small>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-md-4">
+        <button class="btn @(isConnected ? "btn-danger" : "btn-success") w-100" @onclick="ToggleConnection">
+            <i class="oi @(isConnected ? "oi-power-standby" : "oi-transfer")"></i>
+            @(isConnected ? "Ngắt kết nối PLC" : "Kết nối với PLC")
+        </button>
+    </div>
+</div>
+
+@code {
+    private DbWebserver dbWebserver = new DbWebserver();
+    private bool isConnected = false;
+    private System.Threading.Timer? timer;
+    private string errorMessage = "";
+    private string connectionMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Khởi tạo timer để cập nhật trạng thái định kỳ
+        timer = new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                // Nếu đã kết nối, cập nhật trạng thái
+                if (isConnected)
+                {
+                    await UpdateStatus();
+                }
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception ex)
+            {
+                await InvokeAsync(() => {
+                    errorMessage = $"Lỗi cập nhật trạng thái: {ex.Message}";
+                    StateHasChanged();
+                });
+            }
+        }, null, 0, 500);
+
+        // Tự động kết nối khi trang được tải
+        await ConnectToPLC();
+    }
+
+    private void ClearError()
+    {
+        errorMessage = "";
+    }
+
+    private async Task ConnectToPLC()
+    {
+        try
+        {
+            connectionMessage = "Đang kết nối với PLC...";
+            await InvokeAsync(StateHasChanged);
+            
+            var result = await PlcService.ConnectAsync();
+            isConnected = result.success;
+            connectionMessage = result.message;
+            
+            if (isConnected)
+            {
+                // Đọc trạng thái ban đầu sau khi kết nối thành công
+                await UpdateStatus();
+            }
+        }
+        catch (Exception ex)
+        {
+            isConnected = false;
+            errorMessage = $"Lỗi không mong đợi: {ex.Message}";
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task DisconnectFromPLC()
+    {
+        try {
+            await PlcService.DisconnectAsync();
+            isConnected = false;
+            connectionMessage = "Đã ngắt kết nối với PLC";
+        }
+        catch (Exception ex) {
+            connectionMessage = $"Lỗi khi ngắt kết nối: {ex.Message}";
+        }
+    }
+
+    private async Task ToggleConnection()
+    {
+        if (isConnected)
+        {
+            await DisconnectFromPLC();
+        }
+        else
+        {
+            await ConnectToPLC();
+        }
+    }
+
+    private async Task UpdateStatus()
+    {
+        if (!isConnected)
+            return;
+
+        // Đọc tất cả giá trị DB_Webserver
+        try
+        {
+            // Đọc từng bit riêng lẻ
+            var tasks = new List<Task>();
+            
+            tasks.Add(Task.Run(async () => dbWebserver.DB_RH = await PlcService.ReadDbWebserverBit("DB_RH")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_RG = await PlcService.ReadDbWebserverBit("DB_RG")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_KBR = await PlcService.ReadDbWebserverBit("DB_KBR")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_DBT = await PlcService.ReadDbWebserverBit("DB_DBT")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_TD = await PlcService.ReadDbWebserverBit("DB_TD")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_CTC1 = await PlcService.ReadDbWebserverBit("DB_CTC1")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_CTC2 = await PlcService.ReadDbWebserverBit("DB_CTC2")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_CTT_DG = await PlcService.ReadDbWebserverBit("DB_CTT_DG")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_K3 = await PlcService.ReadDbWebserverBit("DB_K3")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_K2 = await PlcService.ReadDbWebserverBit("DB_K2")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_RRH = await PlcService.ReadDbWebserverBit("DB_RRH")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_RDG = await PlcService.ReadDbWebserverBit("DB_RDG")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_N = await PlcService.ReadDbWebserverBit("DB_N")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_T = await PlcService.ReadDbWebserverBit("DB_T")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_KT = await PlcService.ReadDbWebserverBit("DB_KT")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_KN = await PlcService.ReadDbWebserverBit("DB_KN")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_K4 = await PlcService.ReadDbWebserverBit("DB_K4")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_DH1 = await PlcService.ReadDbWebserverBit("DB_DH1")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_DH2 = await PlcService.ReadDbWebserverBit("DB_DH2")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_C = await PlcService.ReadDbWebserverBit("DB_C")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_chayThuan = await PlcService.ReadDbWebserverBit("DB_chayThuan")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_chayNghich = await PlcService.ReadDbWebserverBit("DB_chayNghich")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_m1 = await PlcService.ReadDbWebserverBit("DB_m1")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_D = await PlcService.ReadDbWebserverBit("DB_D")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_m2 = await PlcService.ReadDbWebserverBit("DB_m2")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_M3 = await PlcService.ReadDbWebserverBit("DB_M3")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_TT = await PlcService.ReadDbWebserverBit("DB_TT")));
+            tasks.Add(Task.Run(async () => dbWebserver.DB_TN = await PlcService.ReadDbWebserverBit("DB_TN")));
+            
+            // Chờ tất cả các task hoàn thành
+            await Task.WhenAll(tasks);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Lỗi đọc dữ liệu: {ex.Message}";
+            // Không ngắt kết nối ngay lập tức khi có lỗi đọc
+            // isConnected = false;
+        }
+    }
+
+    private async Task ToggleButton(string buttonName)
+    {
+        if (!isConnected)
+        {
+            errorMessage = "Chưa kết nối với PLC. Vui lòng kết nối trước.";
+            return;
+        }
+
+        bool currentValue = false;
+        
+        // Lấy giá trị hiện tại dựa trên tên nút
+        switch (buttonName)
+        {
+            case "DB_CTC1": currentValue = dbWebserver.DB_CTC1; break;
+            case "DB_CTC2": currentValue = dbWebserver.DB_CTC2; break;
+            case "DB_D": currentValue = dbWebserver.DB_D; break;
+            case "DB_m1": currentValue = dbWebserver.DB_m1; break;
+            case "DB_m2": currentValue = dbWebserver.DB_m2; break;
+            case "DB_M3": currentValue = dbWebserver.DB_M3; break;
+            case "DB_TT": currentValue = dbWebserver.DB_TT; break;
+            case "DB_TN": currentValue = dbWebserver.DB_TN; break;
+        }
+
+        // Đảo giá trị
+        bool newValue = !currentValue;
+        
+        try {
+            // Ghi giá trị mới vào PLC
+            bool writeSuccess = await PlcService.WriteDbWebserverBit(buttonName, newValue);
+            
+            if (!writeSuccess) {
+                errorMessage = $"Không thể ghi giá trị {newValue} vào {buttonName}";
+                return;
+            }
+            
+            // Cập nhật trạng thái cục bộ
+            await UpdateStatus();
+        }
+        catch (Exception ex) {
+            errorMessage = $"Lỗi khi ghi dữ liệu: {ex.Message}";
+        }
+    }
+
+    private async Task EmergencyStop()
+    {
+        if (!isConnected)
+        {
+            errorMessage = "Chưa kết nối với PLC. Vui lòng kết nối trước.";
+            return;
+        }
+
+        try {
+            // Thiết lập bit dừng khẩn cấp
+            await PlcService.WriteDbWebserverBit("DB_D", true);
+            
+            // Đặt lại tất cả các bit điều khiển
+            await PlcService.WriteDbWebserverBit("DB_m1", false);
+            await PlcService.WriteDbWebserverBit("DB_m2", false);
+            await PlcService.WriteDbWebserverBit("DB_TT", false);
+            await PlcService.WriteDbWebserverBit("DB_TN", false);
+            await PlcService.WriteDbWebserverBit("DB_M3", false);
+            
+            // Cập nhật trạng thái cục bộ
+            await UpdateStatus();
+        }
+        catch (Exception ex) {
+            errorMessage = $"Lỗi khi thực hiện dừng khẩn cấp: {ex.Message}";
+        }
+    }
+
+    public void Dispose()
+    {
+        timer?.Dispose();
+        _ = PlcService.DisconnectAsync();
+    }
+}
+
+<style>
+    .control-panel {
+        background-color: #ddd;
+        padding: 15px;
+        border-radius: 5px;
+    }
+    
+    .indicator-panel {
+        border-radius: 5px;
+        height: 100%;
+    }
+    
+    .indicator {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        font-weight: bold;
+        color: white;
+        border: 2px solid #333;
+    }
+    
+    .indicator-green {
+        background-color: #00ff00;
+    }
+    
+    .indicator-red {
+        background-color: #ff0000;
+    }
+    
+    .indicator-off {
+        background-color: #555;
+    }
+</style>
